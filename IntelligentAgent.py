@@ -12,15 +12,18 @@ class IntelligentAgent(BaseAI):
         best_move, _ = self.expectiminimax(grid, 0, True, alpha, beta)
         return best_move
 
-    def expectiminimax(self, grid, depth, maximizingPlayer, alpha, beta):
+    def expectiminimax(self, grid, depth, maximizingPlayer, alpha, beta, move=None):
         if depth == self.depth_limit or not grid.canMove():
-            return None, self.h3(grid)
+            return None, self.h4(grid, move)
         
         best_move = None
         if maximizingPlayer:
             max_eval = float('-inf')
             for move, new_grid in grid.getAvailableMoves():
-                _, eval = self.expectiminimax(new_grid, depth+1, False, alpha, beta)
+                # print("move: " + str(move))
+                # if move == 1:
+                #     continue
+                _, eval = self.expectiminimax(new_grid, depth+1, False, alpha, beta, move)
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
@@ -39,6 +42,78 @@ class IntelligentAgent(BaseAI):
                     break  # alpha-beta pruning
             avg_eval = sum_eval / num_possible_moves if num_possible_moves > 0 else 0
             return best_move, avg_eval
+
+    def h0(self, grid):
+        return grid.getMaxTile()
+       
+    def calculate_weights(self, grid):
+        max_tile = grid.getMaxTile()
+        empty_cells = len(grid.getAvailableCells())
+
+        # Assume weights are initially all 1.0
+        weights = {
+            'empty': 5.0,
+            'monotonicity': 4.0,
+            'smoothness': 1.0,
+            'random': 0.5,
+            'uniformity': 0.0,
+            'greedy': 0.0,
+            'merges': 3.0,
+            # 'non_monotonic_penalty': 0.0,
+            'open_2_or_4': 5.0,
+            'corners': 0.0
+        }
+
+        # Example conditions to adjust weights:
+        
+        
+        if max_tile == 1024:
+            weights['empty'] += 1.0
+            weights['monotonicity'] += 2.0
+            weights['corners'] += 0.1
+        elif empty_cells <= 2:
+            weights['empty'] += 2.0
+            weights['merges'] += 1.0
+            weights['open_2_or_4'] += 1.0
+        # ... other conditions to adjust weights
+
+        return weights
+    
+    def h4(self, grid, move):
+        weights = self.calculate_weights(grid)
+        
+        empty_score = self.h_empty(grid)
+        monotonicity_score = self.h_monotinicity(grid)
+        smoothness_score = self.h_smoothness(grid)
+        random_score = self.h_random(grid)
+        uniformity_score = self.h_uniformity(grid)
+        greedy_score = self.h_greedy(grid)
+        merges = self.h_merges(grid)
+        # non_mono_penalty_score = self.h_non_monotonic_penalty(grid)
+        open_2_or_4_score = self.h_open_spot_next_to_2_or_4(grid)
+        corners_score = self.h_large_values_in_corners(grid)
+        # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
+        
+        h4 = (
+
+            weights['empty'] * empty_score +
+            weights['monotonicity'] * monotonicity_score +
+            weights['smoothness'] * smoothness_score +
+            weights['random'] * random_score +
+            weights['uniformity'] * uniformity_score +
+            weights['greedy'] * greedy_score +
+            weights['merges'] * merges +
+            # weights['non_monotonic_penalty'] * non_mono_penalty_score +
+            weights['open_2_or_4'] * open_2_or_4_score +
+            weights['corners'] * corners_score
+
+        )
+
+        if move == 1:
+            h4 = h4 / 4
+
+        return h4
+
 
     def h_empty(self, grid):
         empty_cells = len(grid.getAvailableCells())
