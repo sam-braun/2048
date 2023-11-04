@@ -4,12 +4,12 @@ from BaseAI import BaseAI
 
 class IntelligentAgent(BaseAI):
     def __init__(self):
-        self.depth_limit = 4  # or another number based on your testing
+        self.depth_limit = 4
         
     def getMove(self, grid):
         alpha = float('-inf')
         beta = float('inf')
-        best_move, _ = self.expectiminimax(grid, 0, True, alpha, beta)  # Assuming it's player's turn first
+        best_move, _ = self.expectiminimax(grid, 0, True, alpha, beta)
         return best_move
 
     def expectiminimax(self, grid, depth, maximizingPlayer, alpha, beta):
@@ -159,6 +159,14 @@ class IntelligentAgent(BaseAI):
                     score += grid.map[j][i]  # Add the value of the tile to the score
         
         return score
+    
+    def h_large_values_in_corners(self, grid):
+        corners = [(0, 0), (0, grid.size - 1), (grid.size - 1, 0), (grid.size - 1, grid.size - 1)]
+        score = 0
+        for corner in corners:
+            x, y = corner
+            score += grid.map[x][y]
+        return score
 
 
 
@@ -225,17 +233,20 @@ class IntelligentAgent(BaseAI):
         merges = self.h_merges(grid)
         open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
         smoothness = self.h_smoothness(grid)
+        corners = self.h_large_values_in_corners(grid)
         # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
         
         h3 = (
-            empty_score * 3.0 +
+            empty_score * 5.0 +
             monotonicity_score * 5.0 +
             uniformity_score * 0.0 +
             greedy_score * 0.0 +
-            random_score * 0.0 +
-            merges * 0.0 +
+            random_score * 0.5 +
+            merges * 1.0 +
             open_2_or_4 * 5.0 +
-            smoothness * 1.0
+            smoothness * 1.0 +
+            corners * 0.0 +
+            merges * 3.0
 
         )
 
