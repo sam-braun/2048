@@ -98,6 +98,40 @@ class IntelligentAgent(BaseAI):
                     penalty += (grid.map[j][i] - grid.map[j + 1][i]) * (2 ** (grid.map[j][i] + grid.map[j + 1][i]))
         # print(str(penalty))
         return penalty
+    
+    def h_open_spot_next_to_2_or_4(self, grid):
+        if len(grid.getAvailableCells()) != 1:
+            return 0  # Return 0 if there are more or less than one open spots
+
+        no_merges = True
+        for i in range(grid.size):
+            for j in range(grid.size - 1):
+                # Check for horizontal and vertical merges
+                if grid.map[i][j] == grid.map[i][j + 1] or grid.map[j][i] == grid.map[j + 1][i]:
+                    no_merges = False
+                    break
+            if not no_merges:
+                break
+
+        if no_merges:
+            open_cell = grid.getAvailableCells()[0]  # Get the coordinates of the open cell
+            adjacent_cells = [
+                (open_cell[0] + 1, open_cell[1]),
+                (open_cell[0] - 1, open_cell[1]),
+                (open_cell[0], open_cell[1] + 1),
+                (open_cell[0], open_cell[1] - 1),
+            ]
+            score = 0
+            for cell in adjacent_cells:
+                x, y = cell
+                # Check if the cell coordinates are valid and if it's a 2 or 4 tile
+                if 0 <= x < grid.size and 0 <= y < grid.size and (grid.map[x][y] == 2 or grid.map[x][y] == 4):
+                    score += 1  # Increment score for each 2 or 4 tile found adjacent to the open cell
+
+            return score
+
+        return 0  # Return 0 if there are possible merges
+
 
 
     def h1(self, grid):
@@ -106,14 +140,22 @@ class IntelligentAgent(BaseAI):
         random_score = self.h_random(grid)
         non_mon_score = self.h_non_monotonic_penalty(grid)
         merges = self.h_merges(grid)
+        open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
         # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
         
         h1 = (
-            empty_score * 3.0 +
-            monotonicity_score * 2.0 +
+            # empty_score * 5.0 +
+            # monotonicity_score * 3.0 +
+            # random_score * 1.0 +
+            # # non_mon_score * 1.0
+            # merges * 3.0
+
+            empty_score * 5.0 +
+            monotonicity_score * 3.0 +
             random_score * 1.0 +
             # non_mon_score * 1.0
-            merges * 2.0
+            merges * 1.0 +
+            open_2_or_4 * 5.0
         )
 
         return h1
