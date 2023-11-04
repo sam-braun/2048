@@ -14,7 +14,7 @@ class IntelligentAgent(BaseAI):
 
     def expectiminimax(self, grid, depth, maximizingPlayer, alpha, beta):
         if depth == self.depth_limit or not grid.canMove():
-            return None, self.h1(grid)
+            return None, self.h3(grid)
         
         best_move = None
         if maximizingPlayer:
@@ -55,6 +55,17 @@ class IntelligentAgent(BaseAI):
             monotonicity += m / (grid.size - 1)  # normalized to [0,1]
         
         return monotonicity
+    
+    def h_smoothness(self, grid):
+        smoothness = 0
+        for i in range(grid.size):
+            for j in range(grid.size):
+                if grid.map[i][j] != 0:
+                    for direction in [(0, 1), (1, 0)]:
+                        x, y = i + direction[0], j + direction[1]
+                        if x < grid.size and y < grid.size and grid.map[x][y] != 0:
+                            smoothness -= abs(math.log2(grid.map[i][j]) - math.log2(grid.map[x][y]))
+        return smoothness
     
     def h_random(self, grid):
         return random.random()
@@ -131,6 +142,24 @@ class IntelligentAgent(BaseAI):
             return score
 
         return 0  # Return 0 if there are possible merges
+    
+    def h_large_merges(self, grid):
+        # This function will calculate a heuristic score based on the size of the merges that can be made
+        
+        score = 0  # Initialize score to 0
+        
+        for i in range(grid.size):
+            for j in range(grid.size - 1):
+                # Check for potential horizontal merges
+                if grid.map[i][j] == grid.map[i][j + 1] and grid.map[i][j] != 0:
+                    score += grid.map[i][j]  # Add the value of the tile to the score
+
+                # Check for potential vertical merges
+                if grid.map[j][i] == grid.map[j + 1][i] and grid.map[j][i] != 0:
+                    score += grid.map[j][i]  # Add the value of the tile to the score
+        
+        return score
+
 
 
 
@@ -141,21 +170,25 @@ class IntelligentAgent(BaseAI):
         non_mon_score = self.h_non_monotonic_penalty(grid)
         merges = self.h_merges(grid)
         open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
-        # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
-        
+        larger_merges = self.h_large_merges(grid)
+        smoothness = self.h_smoothness(grid)
+
         h1 = (
             # empty_score * 5.0 +
             # monotonicity_score * 3.0 +
             # random_score * 1.0 +
             # # non_mon_score * 1.0
-            # merges * 3.0
+            # merges * 1.0 +
+            # open_2_or_4 * 5.0
 
             empty_score * 5.0 +
             monotonicity_score * 3.0 +
-            random_score * 1.0 +
+            random_score * 1.5 +
             # non_mon_score * 1.0
-            merges * 1.0 +
-            open_2_or_4 * 5.0
+            merges * 1.5 +
+            open_2_or_4 * 7.0
+            # larger_merges * 0.5
+            
         )
 
         return h1
@@ -166,18 +199,47 @@ class IntelligentAgent(BaseAI):
         uniformity_score = self.h_uniformity(grid)
         greedy_score = self.h_greedy(grid)
         random_score = self.h_random(grid)
+        merges = self.h_merges(grid)
+        open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
         # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
         
         h2 = (
-            empty_score * 5.0 +
-            monotonicity_score * 4.0 +
-            uniformity_score * 3.0 +
-            greedy_score * 2.0 +
-            random_score * 1.0
+            empty_score * 0.0 +
+            monotonicity_score * 3.0 +
+            uniformity_score * 0.0 +
+            greedy_score * 0.0 +
+            random_score * 0.0 +
+            merges * 1.5 +
+            open_2_or_4 * 7.0 
 
         )
 
         return h2
+    
+    def h3(self, grid):
+        empty_score = self.h_empty(grid)
+        monotonicity_score = self.h_monotinicity(grid)
+        uniformity_score = self.h_uniformity(grid)
+        greedy_score = self.h_greedy(grid)
+        random_score = self.h_random(grid)
+        merges = self.h_merges(grid)
+        open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
+        smoothness = self.h_smoothness(grid)
+        # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
+        
+        h3 = (
+            empty_score * 3.0 +
+            monotonicity_score * 5.0 +
+            uniformity_score * 0.0 +
+            greedy_score * 0.0 +
+            random_score * 0.0 +
+            merges * 0.0 +
+            open_2_or_4 * 5.0 +
+            smoothness * 1.0
+
+        )
+
+        return h3
 
 
 
