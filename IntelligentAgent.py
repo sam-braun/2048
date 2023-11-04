@@ -61,7 +61,7 @@ class IntelligentAgent(BaseAI):
             'merges': 3.0,
             # 'non_monotonic_penalty': 0.0,
             'open_2_or_4': 5.0,
-            'corners': 0.0
+            'corner': 1.0
         }
 
         # Example conditions to adjust weights:
@@ -69,8 +69,7 @@ class IntelligentAgent(BaseAI):
         
         if max_tile == 1024:
             weights['empty'] += 1.0
-            weights['monotonicity'] += 2.0
-            weights['corners'] += 0.1
+            # weights['monotonicity'] += 2.0
         elif empty_cells <= 2:
             weights['empty'] += 2.0
             weights['merges'] += 1.0
@@ -91,8 +90,7 @@ class IntelligentAgent(BaseAI):
         merges = self.h_merges(grid)
         # non_mono_penalty_score = self.h_non_monotonic_penalty(grid)
         open_2_or_4_score = self.h_open_spot_next_to_2_or_4(grid)
-        corners_score = self.h_large_values_in_corners(grid)
-        # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
+        in_corner = self.h_top_corner(grid)
         
         h4 = (
 
@@ -104,13 +102,13 @@ class IntelligentAgent(BaseAI):
             weights['greedy'] * greedy_score +
             weights['merges'] * merges +
             # weights['non_monotonic_penalty'] * non_mono_penalty_score +
-            weights['open_2_or_4'] * open_2_or_4_score +
-            weights['corners'] * corners_score
-
+            weights['open_2_or_4'] * open_2_or_4_score
         )
 
+        if in_corner:
+            h4 = h4 * 2
         if move == 1:
-            h4 = h4 / 4
+            h4 = h4 / 20
 
         return h4
 
@@ -235,99 +233,100 @@ class IntelligentAgent(BaseAI):
         
         return score
     
-    def h_large_values_in_corners(self, grid):
-        corners = [(0, 0), (0, grid.size - 1), (grid.size - 1, 0), (grid.size - 1, grid.size - 1)]
-        score = 0
-        for corner in corners:
-            x, y = corner
-            score += grid.map[x][y]
-        return score
+    def h_top_corner(self, grid):
+        max_tile = grid.getMaxTile()
+        top_left_corner = grid.map[0][0]
+        top_right_corner = grid.map[0][grid.size - 1]
+        
+        if top_left_corner == max_tile or top_right_corner == max_tile:
+            return True
+        else:
+            return False
 
 
 
 
-    def h1(self, grid):
-        empty_score = self.h_empty(grid)
-        monotonicity_score = self.h_monotinicity(grid)
-        random_score = self.h_random(grid)
-        non_mon_score = self.h_non_monotonic_penalty(grid)
-        merges = self.h_merges(grid)
-        open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
-        larger_merges = self.h_large_merges(grid)
-        smoothness = self.h_smoothness(grid)
 
-        h1 = (
-            # empty_score * 5.0 +
-            # monotonicity_score * 3.0 +
-            # random_score * 1.0 +
-            # # non_mon_score * 1.0
-            # merges * 1.0 +
-            # open_2_or_4 * 5.0
+    # def h1(self, grid):
+    #     empty_score = self.h_empty(grid)
+    #     monotonicity_score = self.h_monotinicity(grid)
+    #     random_score = self.h_random(grid)
+    #     non_mon_score = self.h_non_monotonic_penalty(grid)
+    #     merges = self.h_merges(grid)
+    #     open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
+    #     larger_merges = self.h_large_merges(grid)
+    #     smoothness = self.h_smoothness(grid)
 
-            empty_score * 5.0 +
-            monotonicity_score * 3.0 +
-            random_score * 1.5 +
-            # non_mon_score * 1.0
-            merges * 1.5 +
-            open_2_or_4 * 7.0
-            # larger_merges * 0.5
+    #     h1 = (
+    #         # empty_score * 5.0 +
+    #         # monotonicity_score * 3.0 +
+    #         # random_score * 1.0 +
+    #         # # non_mon_score * 1.0
+    #         # merges * 1.0 +
+    #         # open_2_or_4 * 5.0
+
+    #         empty_score * 5.0 +
+    #         monotonicity_score * 3.0 +
+    #         random_score * 1.5 +
+    #         # non_mon_score * 1.0
+    #         merges * 1.5 +
+    #         open_2_or_4 * 7.0
+    #         # larger_merges * 0.5
             
-        )
+    #     )
 
-        return h1
+    #     return h1
     
-    def h2(self, grid):
-        empty_score = self.h_empty(grid)
-        monotonicity_score = self.h_monotinicity(grid)
-        uniformity_score = self.h_uniformity(grid)
-        greedy_score = self.h_greedy(grid)
-        random_score = self.h_random(grid)
-        merges = self.h_merges(grid)
-        open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
-        # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
+    # def h2(self, grid):
+    #     empty_score = self.h_empty(grid)
+    #     monotonicity_score = self.h_monotinicity(grid)
+    #     uniformity_score = self.h_uniformity(grid)
+    #     greedy_score = self.h_greedy(grid)
+    #     random_score = self.h_random(grid)
+    #     merges = self.h_merges(grid)
+    #     open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
+    #     # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
         
-        h2 = (
-            empty_score * 0.0 +
-            monotonicity_score * 3.0 +
-            uniformity_score * 0.0 +
-            greedy_score * 0.0 +
-            random_score * 0.0 +
-            merges * 1.5 +
-            open_2_or_4 * 7.0 
+    #     h2 = (
+    #         empty_score * 0.0 +
+    #         monotonicity_score * 3.0 +
+    #         uniformity_score * 0.0 +
+    #         greedy_score * 0.0 +
+    #         random_score * 0.0 +
+    #         merges * 1.5 +
+    #         open_2_or_4 * 7.0 
 
-        )
+    #     )
 
-        return h2
+    #     return h2
     
-    def h3(self, grid):
-        empty_score = self.h_empty(grid)
-        monotonicity_score = self.h_monotinicity(grid)
-        uniformity_score = self.h_uniformity(grid)
-        greedy_score = self.h_greedy(grid)
-        random_score = self.h_random(grid)
-        merges = self.h_merges(grid)
-        open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
-        smoothness = self.h_smoothness(grid)
-        corners = self.h_large_values_in_corners(grid)
-        # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
+    # def h3(self, grid):
+    #     empty_score = self.h_empty(grid)
+    #     monotonicity_score = self.h_monotinicity(grid)
+    #     uniformity_score = self.h_uniformity(grid)
+    #     greedy_score = self.h_greedy(grid)
+    #     random_score = self.h_random(grid)
+    #     merges = self.h_merges(grid)
+    #     open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
+    #     smoothness = self.h_smoothness(grid)
+    #     corners = self.h_large_values_in_corners(grid)
+    #     # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
         
-        h3 = (
-            empty_score * 5.0 +
-            monotonicity_score * 5.0 +
-            uniformity_score * 0.0 +
-            greedy_score * 0.0 +
-            random_score * 0.5 +
-            merges * 1.0 +
-            open_2_or_4 * 5.0 +
-            smoothness * 1.0 +
-            corners * 0.0 +
-            merges * 3.0
+    #     h3 = (
+    #         empty_score * 5.0 +
+    #         monotonicity_score * 5.0 +
+    #         uniformity_score * 0.0 +
+    #         greedy_score * 0.0 +
+    #         random_score * 0.5 +
+    #         merges * 1.0 +
+    #         open_2_or_4 * 5.0 +
+    #         smoothness * 1.0 +
+    #         corners * 0.0 +
+    #         merges * 3.0
 
-        )
+    #     )
 
-        return h3
-
-
+    #     return h3
 
 # def heuristic(self, grid):
 #         # empty_weight = 1.0
