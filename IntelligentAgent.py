@@ -73,19 +73,47 @@ class IntelligentAgent(BaseAI):
     def h_greedy(self, grid):
         max_tile = grid.getMaxTile()
         return max_tile
+    
+    def h_merges(self, grid):
+        merges = 0
+        for i in range(grid.size):
+            for j in range(grid.size - 1):
+                # Horizontal merges
+                if grid.map[i][j] == grid.map[i][j + 1]:
+                    merges += 1
+                # Vertical merges
+                if grid.map[j][i] == grid.map[j + 1][i]:
+                    merges += 1
+        return merges
+
+    def h_non_monotonic_penalty(self, grid):
+        penalty = 0
+        for i in range(grid.size):
+            for j in range(grid.size - 1):
+                # Horizontal penalty
+                if grid.map[i][j] > grid.map[i][j + 1]:
+                    penalty += (grid.map[i][j] - grid.map[i][j + 1]) * (2 ** (grid.map[i][j] + grid.map[i][j + 1]))
+                # Vertical penalty
+                if grid.map[j][i] > grid.map[j + 1][i]:
+                    penalty += (grid.map[j][i] - grid.map[j + 1][i]) * (2 ** (grid.map[j][i] + grid.map[j + 1][i]))
+        # print(str(penalty))
+        return penalty
 
 
     def h1(self, grid):
         empty_score = self.h_empty(grid)
         monotonicity_score = self.h_monotinicity(grid)
         random_score = self.h_random(grid)
+        non_mon_score = self.h_non_monotonic_penalty(grid)
+        merges = self.h_merges(grid)
         # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
         
         h1 = (
-            empty_score * 5.0 +
-            monotonicity_score * 3.0 +
-            random_score * 1.0
-
+            empty_score * 3.0 +
+            monotonicity_score * 2.0 +
+            random_score * 1.0 +
+            # non_mon_score * 1.0
+            merges * 2.0
         )
 
         return h1
