@@ -1,3 +1,4 @@
+# Samuel Braun slb2250
 import random
 import math
 from BaseAI import BaseAI
@@ -82,17 +83,17 @@ class IntelligentAgent(BaseAI):
 
         # Assume weights are initially all 1.0
         weights = {
-            'empty': 4.5,
+            'empty': 4.0, #4.0
             'monotonicity': 2.2,   #2.2
             'smoothness': 1.0,  #1.0
             'random': 0.5,
             'uniformity': 0.0,
             'greedy': 0.0,
-            'merges': 1.0,
+            'merges': 1.0, #1.0
             # 'non_monotonic_penalty': 0.0,
             'open_2_or_4': 2.0,
             'corner': 1.0,
-            'maxy': 3.5
+            'maxy': 3.5 #3.5
         }
 
         # tiles = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
