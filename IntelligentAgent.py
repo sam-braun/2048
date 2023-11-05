@@ -87,20 +87,24 @@ class IntelligentAgent(BaseAI):
             'greedy': 0.0,
             'merges': 0.0,
             # 'non_monotonic_penalty': 0.0,
-            'open_2_or_4': 5.0,
+            'open_2_or_4': 2.0,
             'corner': 1.0
+            # 'maxy': 5.0
         }
 
-        # Example conditions to adjust weights:
-        
+        # tiles = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+
+        # for tile in tiles:
+        #     if max_tile > tile:
+
         
         if max_tile == 1024:
             weights['empty'] += 1.0
             # weights['monotonicity'] += 2.0
         elif empty_cells <= 2:
-            weights['empty'] += 0.5
+            weights['empty'] += 2.0
             weights['merges'] += 1.0
-            weights['open_2_or_4'] += 0.5
+            # weights['open_2_or_4'] += 1.0
         # ... other conditions to adjust weights
 
         return weights, max_tile
@@ -118,6 +122,7 @@ class IntelligentAgent(BaseAI):
         # non_mono_penalty_score = self.h_non_monotonic_penalty(grid)
         open_2_or_4_score = self.h_open_spot_next_to_2_or_4(grid)
         in_corner = self.h_top_corner(grid)
+
         
         h4 = (
 
@@ -130,6 +135,7 @@ class IntelligentAgent(BaseAI):
             weights['merges'] * merges +
             # weights['non_monotonic_penalty'] * non_mono_penalty_score +
             weights['open_2_or_4'] * open_2_or_4_score
+            #max_tile * weights['maxy']
         )
 
         if in_corner:
@@ -152,6 +158,7 @@ class IntelligentAgent(BaseAI):
         #     h4 = h4 * 2
 
         return h4
+    
     
     def compare_top_corners(self, grid):
         left = grid.map[0][0]
