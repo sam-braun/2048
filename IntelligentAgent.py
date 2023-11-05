@@ -82,8 +82,8 @@ class IntelligentAgent(BaseAI):
 
         # Assume weights are initially all 1.0
         weights = {
-            'empty': 4.0,
-            'monotonicity': 2.0,   #2.0
+            'empty': 4.5,
+            'monotonicity': 2.2,   #2.2
             'smoothness': 1.0,  #1.0
             'random': 0.5,
             'uniformity': 0.0,
