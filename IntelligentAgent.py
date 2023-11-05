@@ -1,47 +1,74 @@
 import random
 import math
 from BaseAI import BaseAI
+import time
 
 class IntelligentAgent(BaseAI):
-    def __init__(self):
-        self.depth_limit = 4
         
     def getMove(self, grid):
         alpha = float('-inf')
         beta = float('inf')
-        best_move, _ = self.expectiminimax(grid, 0, True, alpha, beta)
+        best_move, _ = self.expectiminimax(grid, 0, True, alpha, beta, time.process_time())
+        if not grid.getAvailableMoves():
+            return None
         return best_move
 
-    def expectiminimax(self, grid, depth, maximizingPlayer, alpha, beta, move=None):
-        if depth == self.depth_limit or not grid.canMove():
+    def expectiminimax(self, grid, depth, max_player, alpha, beta, start_time, move=None):
+        if depth > 4 or time.process_time() - start_time > 0.2:
             return None, self.h4(grid, move)
         
         best_move = None
-        if maximizingPlayer:
-            max_eval = float('-inf')
-            for move, new_grid in grid.getAvailableMoves():
+        if max_player:
+            util = float('-inf')
+            if not grid.getAvailableMoves():
+                return grid, self.h4(grid, move)
+            
+            for move, new_grid in grid.getAvailableMoves(): # [0, 1, 2, 3]
                 # print("move: " + str(move))
                 # if move == 1:
                 #     continue
-                _, eval = self.expectiminimax(new_grid, depth+1, False, alpha, beta, move)
-                if eval > max_eval:
-                    max_eval = eval
+                
+                _, eval = self.expectiminimax(new_grid, depth+1, False, alpha, beta, start_time, move)
+                
+                if eval > util:
+                    util = eval
                     best_move = move
+               
                 alpha = max(alpha, eval)
                 if beta <= alpha:
-                    break  # alpha-beta pruning
-            return best_move, max_eval
-        else:  # chance node, assuming it's the computer's turn
-            sum_eval = 0
-            num_possible_moves = 0
-            for move, new_grid in grid.getAvailableMoves():
-                _, eval = self.expectiminimax(new_grid, depth+1, True, alpha, beta)
-                sum_eval += eval
-                num_possible_moves += 1
-                if beta <= alpha:
-                    break  # alpha-beta pruning
-            avg_eval = sum_eval / num_possible_moves if num_possible_moves > 0 else 0
-            return best_move, avg_eval
+                    break  # alpha beta pruning
+
+
+            
+            return best_move, util
+        
+
+        else:
+            
+            grid_child, returned_util = None, float('inf') # initial beta
+            
+            available_cells = grid.getAvailableCells()
+            for cell in available_cells:
+                grid_2, grid_4, min_util = grid.clone(), grid.clone(), 0
+                grid_2.setCellValue(cell, 2)
+                grid_4.setCellValue(cell, 4)
+                _, eval_2 = self.expectiminimax(grid_2, depth+1, True, alpha, beta, start_time)
+                _, eval_4 = self.expectiminimax(grid_4, depth+1, True, alpha, beta, start_time)
+
+                min_util = 0.9 * eval_2 + 0.1 * eval_4
+
+                if min_util < returned_util:
+                    returned_util = min_util
+                    grid_child = grid
+                
+                if returned_util <= alpha:
+                    break
+
+                if returned_util < beta:
+                    beta = returned_util
+
+            return grid_child, returned_util
+
 
     def h0(self, grid):
         return grid.getMaxTile()
@@ -53,12 +80,12 @@ class IntelligentAgent(BaseAI):
         # Assume weights are initially all 1.0
         weights = {
             'empty': 5.0,
-            'monotonicity': 4.0,
+            'monotonicity': 3.0,
             'smoothness': 1.0,
             'random': 0.5,
             'uniformity': 0.0,
             'greedy': 0.0,
-            'merges': 3.0,
+            'merges': 0.0,
             # 'non_monotonic_penalty': 0.0,
             'open_2_or_4': 5.0,
             'corner': 1.0
@@ -71,15 +98,15 @@ class IntelligentAgent(BaseAI):
             weights['empty'] += 1.0
             # weights['monotonicity'] += 2.0
         elif empty_cells <= 2:
-            weights['empty'] += 2.0
+            weights['empty'] += 0.5
             weights['merges'] += 1.0
-            weights['open_2_or_4'] += 1.0
+            weights['open_2_or_4'] += 0.5
         # ... other conditions to adjust weights
 
-        return weights
+        return weights, max_tile
     
     def h4(self, grid, move):
-        weights = self.calculate_weights(grid)
+        weights, max_tile = self.calculate_weights(grid)
         
         empty_score = self.h_empty(grid)
         monotonicity_score = self.h_monotinicity(grid)
@@ -106,11 +133,39 @@ class IntelligentAgent(BaseAI):
         )
 
         if in_corner:
-            h4 = h4 * 2
+            h4 = h4 * 30
         if move == 1:
-            h4 = h4 / 20
+            h4 = h4 / 50
+
+        # better_corner, diff = self.compare_top_corners(grid)
+        # if move == better_corner:
+        #     h4 = h4 * math.log(diff, 2)
+
+
+        # if move == 1:
+        #     if empty_score < 3:
+        #         h4 = h4 / 20
+        #     else:
+        #         h4 = h4 / 30
+        
+        # if move == 2:
+        #     h4 = h4 * 2
 
         return h4
+    
+    def compare_top_corners(self, grid):
+        left = grid.map[0][0]
+        right = grid.map[0][grid.size - 1]
+        
+        # Determine the position of the larger value and the difference
+        if left > right:
+            larger_corner_position = 2
+            difference = left - right
+        else:
+            larger_corner_position = 3
+            difference = right - left
+            
+        return larger_corner_position, difference
 
 
     def h_empty(self, grid):
@@ -245,168 +300,3 @@ class IntelligentAgent(BaseAI):
 
 
 
-
-
-    # def h1(self, grid):
-    #     empty_score = self.h_empty(grid)
-    #     monotonicity_score = self.h_monotinicity(grid)
-    #     random_score = self.h_random(grid)
-    #     non_mon_score = self.h_non_monotonic_penalty(grid)
-    #     merges = self.h_merges(grid)
-    #     open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
-    #     larger_merges = self.h_large_merges(grid)
-    #     smoothness = self.h_smoothness(grid)
-
-    #     h1 = (
-    #         # empty_score * 5.0 +
-    #         # monotonicity_score * 3.0 +
-    #         # random_score * 1.0 +
-    #         # # non_mon_score * 1.0
-    #         # merges * 1.0 +
-    #         # open_2_or_4 * 5.0
-
-    #         empty_score * 5.0 +
-    #         monotonicity_score * 3.0 +
-    #         random_score * 1.5 +
-    #         # non_mon_score * 1.0
-    #         merges * 1.5 +
-    #         open_2_or_4 * 7.0
-    #         # larger_merges * 0.5
-            
-    #     )
-
-    #     return h1
-    
-    # def h2(self, grid):
-    #     empty_score = self.h_empty(grid)
-    #     monotonicity_score = self.h_monotinicity(grid)
-    #     uniformity_score = self.h_uniformity(grid)
-    #     greedy_score = self.h_greedy(grid)
-    #     random_score = self.h_random(grid)
-    #     merges = self.h_merges(grid)
-    #     open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
-    #     # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
-        
-    #     h2 = (
-    #         empty_score * 0.0 +
-    #         monotonicity_score * 3.0 +
-    #         uniformity_score * 0.0 +
-    #         greedy_score * 0.0 +
-    #         random_score * 0.0 +
-    #         merges * 1.5 +
-    #         open_2_or_4 * 7.0 
-
-    #     )
-
-    #     return h2
-    
-    # def h3(self, grid):
-    #     empty_score = self.h_empty(grid)
-    #     monotonicity_score = self.h_monotinicity(grid)
-    #     uniformity_score = self.h_uniformity(grid)
-    #     greedy_score = self.h_greedy(grid)
-    #     random_score = self.h_random(grid)
-    #     merges = self.h_merges(grid)
-    #     open_2_or_4 = self.h_open_spot_next_to_2_or_4(grid)
-    #     smoothness = self.h_smoothness(grid)
-    #     corners = self.h_large_values_in_corners(grid)
-    #     # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
-        
-    #     h3 = (
-    #         empty_score * 5.0 +
-    #         monotonicity_score * 5.0 +
-    #         uniformity_score * 0.0 +
-    #         greedy_score * 0.0 +
-    #         random_score * 0.5 +
-    #         merges * 1.0 +
-    #         open_2_or_4 * 5.0 +
-    #         smoothness * 1.0 +
-    #         corners * 0.0 +
-    #         merges * 3.0
-
-    #     )
-
-    #     return h3
-
-# def heuristic(self, grid):
-#         # empty_weight = 1.0
-#         # max_tile_weight = 0.0
-#         # monotonicity_weight = 1.0
-#         # smoothness_weight = 5.0
-#         # clustering_weight = 1.0
-#         # corner_weight = 1.0
-
-        
-
-#         # empty_cells = len(grid.getAvailableCells())
-#         # max_tile = grid.getMaxTile()
-    
-        
-
-#         # # Calculating Smoothness
-#         # smoothness = 0
-#         # for i in range(grid.size):
-#         #     for j in range(grid.size):
-#         #         if grid.map[i][j] != 0:
-#         #             for direction in [(0, 1), (1, 0)]:
-#         #                 x, y = i + direction[0], j + direction[1]
-#         #                 if x < grid.size and y < grid.size and grid.map[x][y] != 0:
-#         #                     smoothness -= abs(math.log2(grid.map[i][j]) - math.log2(grid.map[x][y]))
-
-#         # # Calculating Clustering
-#         # clustering = 0
-#         # for i in range(grid.size):
-#         #     for j in range(grid.size):
-#         #         if grid.map[i][j] != 0:
-#         #             neighbors_sum = 0
-#         #             count = 0
-#         #             for direction in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-#         #                 x, y = i + direction[0], j + direction[1]
-#         #                 if x >= 0 and x < grid.size and y >= 0 and y < grid.size and grid.map[x][y] != 0:
-#         #                     neighbors_sum += abs(math.log2(grid.map[i][j]) - math.log2(grid.map[x][y]))
-#         #                     count += 1
-#         #             if count > 0:
-#         #                 clustering -= neighbors_sum / count
-
-#         # corner_bonus = 0
-#         # corner_indices = [(0, 0), (0, grid.size - 1), (grid.size - 1, 0), (grid.size - 1, grid.size - 1)]
-#         # for i, j in corner_indices:
-#         #     if grid.map[i][j] == max_tile:
-#         #         corner_bonus = max_tile
-
-#         # # Weighted sum of factors
-#         # heuristic_value = (
-#         #     empty_weight * empty_cells +
-#         #     max_tile_weight * math.log2(max_tile) +
-#         #     monotonicity_weight * monotonicity +
-#         #     smoothness_weight * smoothness + clustering_weight * clustering # +
-#         #     # corner_weight * corner_bonus
-            
-#         # )
-
-#         # if max_tile >= 2048:
-#         #     heuristic_value += 10000
-
-#         # # if grid.map[0][0] == max_tile or grid.map[0][3] == max_tile or grid.map[3][0] == max_tile or grid.map[3][3] == max_tile:
-#         # #     heuristic_value += 500  # arbitrary reward value
-
-#         # # merging_opportunities = 0
-#         # # for i in range(grid.size):
-#         # #     for j in range(grid.size - 1):
-#         # #         if grid.map[i][j] == grid.map[i][j + 1]:
-#         # #             merging_opportunities += 1
-#         # # heuristic_value += 50 * merging_opportunities  # arbitrary reward value
-
-#         # # corner_bonus = 0
-#         # # if grid.map[0][0] == max_tile or grid.map[0][3] == max_tile or grid.map[3][0] == max_tile or grid.map[3][3] == max_tile:
-#         # #     corner_bonus = 25  # or some other weight value
-#         # # heuristic_value += corner_bonus
-
-#         empty_score = self.h_empty(grid)
-#         monotonicity_score = self.h_monotinicity(grid)
-#         random_score = self.h_random(grid)
-#         # You can adjust the weights (1.0, 1.0, 1.0) to prioritize certain heuristics over others
-#         return 1.0 * empty_score + 1.0 * monotonicity_score + 1.0 * random_score
-
-        
-#         # return heuristic_value
