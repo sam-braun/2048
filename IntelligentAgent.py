@@ -4,6 +4,9 @@ from BaseAI import BaseAI
 import time
 
 class IntelligentAgent(BaseAI):
+
+    def __init__(self):
+        self.curr_move = 0
         
     def getMove(self, grid):
         alpha = float('-inf')
@@ -13,22 +16,22 @@ class IntelligentAgent(BaseAI):
             return None
         return best_move
 
-    def expectiminimax(self, grid, depth, max_player, alpha, beta, start_time, move=None):
+    def expectiminimax(self, grid, depth, max_player, alpha, beta, start_time, move=None, curr_move=None):
         if depth > 4 or time.process_time() - start_time > 0.2:
-            return None, self.h4(grid, move)
+            return None, self.h4(grid, move, curr_move)
         
         best_move = None
         if max_player:
             util = float('-inf')
             if not grid.getAvailableMoves():
-                return grid, self.h4(grid, move)
+                return grid, self.h4(grid, move, self.curr_move)
             
             for move, new_grid in grid.getAvailableMoves(): # [0, 1, 2, 3]
                 # print("move: " + str(move))
                 # if move == 1:
                 #     continue
                 
-                _, eval = self.expectiminimax(new_grid, depth+1, False, alpha, beta, start_time, move)
+                _, eval = self.expectiminimax(new_grid, depth+1, False, alpha, beta, start_time, move, self.curr_move)
                 
                 if eval > util:
                     util = eval
@@ -38,7 +41,7 @@ class IntelligentAgent(BaseAI):
                 if beta <= alpha:
                     break  # alpha beta pruning
 
-
+            self.curr_move = best_move
             
             return best_move, util
         
@@ -79,17 +82,17 @@ class IntelligentAgent(BaseAI):
 
         # Assume weights are initially all 1.0
         weights = {
-            'empty': 5.0,
-            'monotonicity': 3.0,
-            'smoothness': 1.0,
+            'empty': 4.0,
+            'monotonicity': 2.0,   #2.0
+            'smoothness': 1.0,  #1.0
             'random': 0.5,
             'uniformity': 0.0,
             'greedy': 0.0,
-            'merges': 0.0,
+            'merges': 1.0,
             # 'non_monotonic_penalty': 0.0,
             'open_2_or_4': 2.0,
-            'corner': 1.0
-            # 'maxy': 5.0
+            'corner': 1.0,
+            'maxy': 3.5
         }
 
         # tiles = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
@@ -109,7 +112,7 @@ class IntelligentAgent(BaseAI):
 
         return weights, max_tile
     
-    def h4(self, grid, move):
+    def h4(self, grid, move, prev_move):
         weights, max_tile = self.calculate_weights(grid)
         
         empty_score = self.h_empty(grid)
@@ -118,7 +121,7 @@ class IntelligentAgent(BaseAI):
         random_score = self.h_random(grid)
         uniformity_score = self.h_uniformity(grid)
         greedy_score = self.h_greedy(grid)
-        merges = self.h_merges(grid)
+        merges = self.h_large_merges(grid)
         # non_mono_penalty_score = self.h_non_monotonic_penalty(grid)
         open_2_or_4_score = self.h_open_spot_next_to_2_or_4(grid)
         in_corner = self.h_top_corner(grid)
@@ -134,14 +137,16 @@ class IntelligentAgent(BaseAI):
             weights['greedy'] * greedy_score +
             weights['merges'] * merges +
             # weights['non_monotonic_penalty'] * non_mono_penalty_score +
-            weights['open_2_or_4'] * open_2_or_4_score
-            #max_tile * weights['maxy']
+            weights['open_2_or_4'] * open_2_or_4_score +
+            max_tile * weights['maxy']
         )
 
         if in_corner:
             h4 = h4 * 30
         if move == 1:
-            h4 = h4 / 50
+            h4 = h4 / 10000
+        if prev_move == 1 and move == 0:
+            h4 = h4 * 100000000
 
         # better_corner, diff = self.compare_top_corners(grid)
         # if move == better_corner:
@@ -279,21 +284,43 @@ class IntelligentAgent(BaseAI):
         return 0  # Return 0 if there are possible merges
     
     def h_large_merges(self, grid):
-        # This function will calculate a heuristic score based on the size of the merges that can be made
-        
-        score = 0  # Initialize score to 0
-        
-        for i in range(grid.size):
-            for j in range(grid.size - 1):
-                # Check for potential horizontal merges
-                if grid.map[i][j] == grid.map[i][j + 1] and grid.map[i][j] != 0:
-                    score += grid.map[i][j]  # Add the value of the tile to the score
 
-                # Check for potential vertical merges
-                if grid.map[j][i] == grid.map[j + 1][i] and grid.map[j][i] != 0:
-                    score += grid.map[j][i]  # Add the value of the tile to the score
+        possible_mergers = 0
+
+        for neighbor1 in range(grid.size):
+            for neighbor2 in range(grid.size):
+                tile_value = grid.map[neighbor1][neighbor2]
+
+                # check if the current tile has a value
+                if tile_value > 0:
+                    # Check adjacent tiles (up, down, left, and right)
+                    neighbors = [(neighbor1 + neighbor3, neighbor2 + neighbor4)
+                                 for neighbor3, neighbor4 in [(0, 1), (0, -1), (1, 0), (-1, 0)]]
+
+                    for n1, n2 in neighbors:
+                        if 0 <= n1 < grid.size and 0 <= n2 < grid.size:
+                            neighbor_value = grid.map[n1][n2]
+
+                            # If the neighbor has the same value, it's a possible merger
+                            if neighbor_value == tile_value:
+                                possible_mergers += 1
+
+        return possible_mergers
+        # # This function will calculate a heuristic score based on the size of the merges that can be made
         
-        return score
+        # score = 0  # Initialize score to 0
+        
+        # for i in range(grid.size):
+        #     for j in range(grid.size - 1):
+        #         # Check for potential horizontal merges
+        #         if grid.map[i][j] == grid.map[i][j + 1] and grid.map[i][j] != 0:
+        #             score += grid.map[i][j]  # Add the value of the tile to the score
+
+        #         # Check for potential vertical merges
+        #         if grid.map[j][i] == grid.map[j + 1][i] and grid.map[j][i] != 0:
+        #             score += grid.map[j][i]  # Add the value of the tile to the score
+        
+        # return score
     
     def h_top_corner(self, grid):
         max_tile = grid.getMaxTile()
@@ -304,6 +331,3 @@ class IntelligentAgent(BaseAI):
             return True
         else:
             return False
-
-
-
