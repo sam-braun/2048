@@ -27,11 +27,8 @@ class IntelligentAgent(BaseAI):
             if not grid.getAvailableMoves():
                 return grid, self.h4(grid, move, self.curr_move)
             
-            for move, new_grid in grid.getAvailableMoves(): # [0, 1, 2, 3]
-                # print("move: " + str(move))
-                # if move == 1:
-                #     continue
-                
+            for move, new_grid in grid.getAvailableMoves():
+
                 _, eval = self.expectiminimax(new_grid, depth+1, False, alpha, beta, start_time, move, self.curr_move)
                 
                 if eval > util:
@@ -81,7 +78,6 @@ class IntelligentAgent(BaseAI):
         max_tile = grid.getMaxTile()
         empty_cells = len(grid.getAvailableCells())
 
-        # Assume weights are initially all 1.0
         weights = {
             'empty': 4.0, #4.0
             'monotonicity': 2.2,   #2.2
@@ -95,21 +91,12 @@ class IntelligentAgent(BaseAI):
             'corner': 1.0,
             'maxy': 3.5 #3.5
         }
-
-        # tiles = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
-
-        # for tile in tiles:
-        #     if max_tile > tile:
-
         
         if max_tile == 1024:
             weights['empty'] += 1.0
-            # weights['monotonicity'] += 2.0
         elif empty_cells <= 2:
             weights['empty'] += 2.0
             weights['merges'] += 1.0
-            # weights['open_2_or_4'] += 1.0
-        # ... other conditions to adjust weights
 
         return weights, max_tile
     
@@ -149,28 +136,12 @@ class IntelligentAgent(BaseAI):
         if prev_move == 1 and move == 0:
             h4 = h4 * 100000000
 
-        # better_corner, diff = self.compare_top_corners(grid)
-        # if move == better_corner:
-        #     h4 = h4 * math.log(diff, 2)
-
-
-        # if move == 1:
-        #     if empty_score < 3:
-        #         h4 = h4 / 20
-        #     else:
-        #         h4 = h4 / 30
-        
-        # if move == 2:
-        #     h4 = h4 * 2
-
         return h4
-    
     
     def compare_top_corners(self, grid):
         left = grid.map[0][0]
         right = grid.map[0][grid.size - 1]
         
-        # Determine the position of the larger value and the difference
         if left > right:
             larger_corner_position = 2
             difference = left - right
@@ -186,10 +157,9 @@ class IntelligentAgent(BaseAI):
         return empty_cells
     
     def h_monotinicity(self, grid):
-        # Calculating Monotonicity
         monotonicity = 0
         for i in range(grid.size):
-            m = 0  # current monotonicity
+            m = 0 
             for j in range(grid.size - 1):
                 if grid.map[i][j] >= grid.map[i][j + 1]:
                     m += 1
@@ -220,7 +190,7 @@ class IntelligentAgent(BaseAI):
                         x, y = i + direction[0], j + direction[1]
                         if x < grid.size and y < grid.size and grid.map[x][y] != 0:
                             uniformity -= abs(grid.map[i][j] - grid.map[x][y])
-        return -uniformity  # return negative since lower uniformity (less difference between tiles) is better
+        return -uniformity 
 
     def h_greedy(self, grid):
         max_tile = grid.getMaxTile()
@@ -230,10 +200,8 @@ class IntelligentAgent(BaseAI):
         merges = 0
         for i in range(grid.size):
             for j in range(grid.size - 1):
-                # Horizontal merges
                 if grid.map[i][j] == grid.map[i][j + 1]:
                     merges += 1
-                # Vertical merges
                 if grid.map[j][i] == grid.map[j + 1][i]:
                     merges += 1
         return merges
@@ -242,23 +210,19 @@ class IntelligentAgent(BaseAI):
         penalty = 0
         for i in range(grid.size):
             for j in range(grid.size - 1):
-                # Horizontal penalty
                 if grid.map[i][j] > grid.map[i][j + 1]:
                     penalty += (grid.map[i][j] - grid.map[i][j + 1]) * (2 ** (grid.map[i][j] + grid.map[i][j + 1]))
-                # Vertical penalty
                 if grid.map[j][i] > grid.map[j + 1][i]:
                     penalty += (grid.map[j][i] - grid.map[j + 1][i]) * (2 ** (grid.map[j][i] + grid.map[j + 1][i]))
-        # print(str(penalty))
         return penalty
     
     def h_open_spot_next_to_2_or_4(self, grid):
         if len(grid.getAvailableCells()) != 1:
-            return 0  # Return 0 if there are more or less than one open spots
+            return 0
 
         no_merges = True
         for i in range(grid.size):
             for j in range(grid.size - 1):
-                # Check for horizontal and vertical merges
                 if grid.map[i][j] == grid.map[i][j + 1] or grid.map[j][i] == grid.map[j + 1][i]:
                     no_merges = False
                     break
@@ -266,7 +230,7 @@ class IntelligentAgent(BaseAI):
                 break
 
         if no_merges:
-            open_cell = grid.getAvailableCells()[0]  # Get the coordinates of the open cell
+            open_cell = grid.getAvailableCells()[0]
             adjacent_cells = [
                 (open_cell[0] + 1, open_cell[1]),
                 (open_cell[0] - 1, open_cell[1]),
@@ -276,13 +240,12 @@ class IntelligentAgent(BaseAI):
             score = 0
             for cell in adjacent_cells:
                 x, y = cell
-                # Check if the cell coordinates are valid and if it's a 2 or 4 tile
                 if 0 <= x < grid.size and 0 <= y < grid.size and (grid.map[x][y] == 2 or grid.map[x][y] == 4):
-                    score += 1  # Increment score for each 2 or 4 tile found adjacent to the open cell
+                    score += 1
 
             return score
 
-        return 0  # Return 0 if there are possible merges
+        return 0
     
     def h_large_merges(self, grid):
 
@@ -292,7 +255,6 @@ class IntelligentAgent(BaseAI):
             for j in range(grid.size):
                 tile_value = grid.map[i][j]
 
-                # check if the current tile has a value
                 if tile_value > 0:
                     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
                     adj_tiles = [(i + di, j + dj) for di, dj in directions]
@@ -301,7 +263,6 @@ class IntelligentAgent(BaseAI):
                         if 0 <= a < grid.size and 0 <= b < grid.size:
                             neighbor_value = grid.map[a][b]
 
-                            # If the neighbor has the same value, it's a possible merger
                             if neighbor_value == tile_value:
                                 possible_mergers += 1
 
@@ -316,14 +277,4 @@ class IntelligentAgent(BaseAI):
             return True
         else:
             return False
-
-
-
-
-
-
-
-
-
-
 
