@@ -21,7 +21,7 @@ class IntelligentAgent(BaseAI):
 
     # expectiminimax algorithm
     def expectiminimax(self, grid, depth, max_player, alpha, beta, start_time, move=None, curr_move=None):
-        if depth > 4 or time.process_time() - start_time > 0.2:
+        if depth > 4 or time.process_time() - start_time > 0.19:
             return None, self.get_full_heuristic(grid, move, curr_move)
         
         # max player
@@ -84,12 +84,13 @@ class IntelligentAgent(BaseAI):
             'corner': 1.0,
             'maxy': 3.5 #3.5
         }
-        
+
         if max_tile == 1024:
             weights['empty'] += 1.0
         elif empty_cells <= 2:
             weights['empty'] += 2.0
             weights['merges'] += 1.0
+
 
         return weights, max_tile
     
@@ -102,7 +103,6 @@ class IntelligentAgent(BaseAI):
         smoothness_score = self.h_smoothness(grid)
         random_score = self.h_random(grid)
         merges = self.h_large_merges(grid)
-        open_2_or_4_score = self.h_open_spot_next_to_2_or_4(grid)
         in_corner = self.h_top_corner(grid)
         
         heuristic = (
@@ -111,8 +111,7 @@ class IntelligentAgent(BaseAI):
             weights['smoothness'] * smoothness_score +
             weights['random'] * random_score +
             weights['merges'] * merges +
-            weights['open_2_or_4'] * open_2_or_4_score +
-            max_tile * weights['maxy']
+            weights['maxy'] + max_tile
         )
 
         if in_corner:
@@ -124,6 +123,7 @@ class IntelligentAgent(BaseAI):
 
         return heuristic
     
+    # compares values of top-left and top-right corners and returns larger value
     def h_compare_top_corners(self, grid):
         left = grid.map[0][0]
         right = grid.map[0][grid.size - 1]
@@ -154,7 +154,7 @@ class IntelligentAgent(BaseAI):
         
         return monotonicity / ((grid.size - 1) * grid.size)
     
-    # heuristic assesses smoothness of transitions between tiles
+    # heuristic evaluates smoothness of transitions between tiles
     def h_smoothness(self, grid):
         smoothness = 0
         for i in range(grid.size):
@@ -171,55 +171,19 @@ class IntelligentAgent(BaseAI):
     def h_random(self, grid):
         return random.random()
     
-    # heuristic evaluates how many open spots are next to 2 or 4
-    def h_open_spot_next_to_2_or_4(self, grid):
-        if len(grid.getAvailableCells()) != 1:
-            return 0
-
-        no_merges = True
-        for i in range(grid.size):
-            for j in range(grid.size - 1):
-                if grid.map[i][j] == grid.map[i][j + 1] or grid.map[j][i] == grid.map[j + 1][i]:
-                    no_merges = False
-                    break
-            if not no_merges:
-                break
-
-        if no_merges:
-            open_cell = grid.getAvailableCells()[0]
-            adjacent_cells = [
-                (open_cell[0] + 1, open_cell[1]),
-                (open_cell[0] - 1, open_cell[1]),
-                (open_cell[0], open_cell[1] + 1),
-                (open_cell[0], open_cell[1] - 1),
-            ]
-
-            score = 0
-            for cell in adjacent_cells:
-                x, y = cell
-                if 0 <= x < grid.size and 0 <= y < grid.size and (grid.map[x][y] == 2 or grid.map[x][y] == 4):
-                    score += 1
-
-            return score
-
-        return 0
-    
     # heuristic evaluates how many large merges are possible
     def h_large_merges(self, grid):
         merge_count = 0
         for i in range(grid.size):
             for j in range(grid.size):
-                curr_tile = grid.map[i][j]
+                tile = grid.map[i][j]
 
-                if curr_tile > 0:
-                    directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-                    adj_tiles = [(i + di, j + dj) for di, dj in directions]
-
-                    for a, b in adj_tiles:
-                        if 0 <= a < grid.size and 0 <= b < grid.size:
-                            adj_tile = grid.map[a][b]
-
-                            if adj_tile == curr_tile:
+                if tile > 0:
+                    # Check the tile to the right and below, to avoid counting duplicates
+                    for dx, dy in [(0, 1), (1, 0)]:
+                        new_i, new_j = i + dx, j + dy
+                        if 0 <= new_i < grid.size and 0 <= new_j < grid.size:
+                            if grid.map[new_i][new_j] == tile:
                                 merge_count += 1
 
         return merge_count
