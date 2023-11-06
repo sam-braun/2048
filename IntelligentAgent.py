@@ -21,7 +21,7 @@ class IntelligentAgent(BaseAI):
 
     # expectiminimax algorithm
     def expectiminimax(self, grid, depth, max_player, alpha, beta, start_time, move=None, curr_move=None):
-        if depth > 4 or time.process_time() - start_time > 0.19:
+        if depth > 4 or time.process_time() - start_time > 0.20:
             return None, self.get_full_heuristic(grid, move, curr_move)
         
         # max player
@@ -98,19 +98,19 @@ class IntelligentAgent(BaseAI):
     def get_full_heuristic(self, grid, move, prev_move):
         weights, max_tile = self.get_weights(grid)
         
-        empty_score = self.h_empty(grid)
-        monotonicity_score = self.h_monotinicity(grid)
-        smoothness_score = self.h_smoothness(grid)
-        random_score = self.h_random(grid)
-        merges = self.h_large_merges(grid)
+        empty_h = self.h_empty(grid)
+        monotonicity_h = self.h_monotinicity(grid)
+        smoothness_h = self.h_smoothness(grid)
+        random_h = self.h_random(grid)
+        merge_h = self.h_large_merges(grid)
         in_corner = self.h_top_corner(grid)
         
         heuristic = (
-            weights['empty'] * empty_score +
-            weights['monotonicity'] * monotonicity_score +
-            weights['smoothness'] * smoothness_score +
-            weights['random'] * random_score +
-            weights['merges'] * merges +
+            weights['empty'] * empty_h +
+            weights['monotonicity'] * monotonicity_h +
+            weights['smoothness'] * smoothness_h +
+            weights['random'] * random_h +
+            weights['merges'] * merge_h +
             weights['maxy'] + max_tile
         )
 
@@ -165,6 +165,7 @@ class IntelligentAgent(BaseAI):
                         x, y = i + direction[0], j + direction[1]
                         if x < grid.size and y < grid.size and grid.map[x][y] != 0:
                             smoothness -= abs(math.log2(grid.map[i][j]) - math.log2(grid.map[x][y]))
+
         return smoothness
     
     # for heuristic: generates random value to add variability to heuristic function
@@ -173,20 +174,19 @@ class IntelligentAgent(BaseAI):
     
     # heuristic evaluates how many large merges are possible
     def h_large_merges(self, grid):
-        merge_count = 0
+        merges = 0
         for i in range(grid.size):
             for j in range(grid.size):
                 tile = grid.map[i][j]
 
                 if tile > 0:
-                    # Check the tile to the right and below, to avoid counting duplicates
                     for dx, dy in [(0, 1), (1, 0)]:
                         new_i, new_j = i + dx, j + dy
                         if 0 <= new_i < grid.size and 0 <= new_j < grid.size:
                             if grid.map[new_i][new_j] == tile:
-                                merge_count += 1
+                                merges += 1
 
-        return merge_count
+        return merges
     
     # heuristic evaluates if top left or top right corner is the largest tile
     def h_top_corner(self, grid):
