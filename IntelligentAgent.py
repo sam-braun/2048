@@ -181,40 +181,40 @@ class IntelligentAgent(BaseAI):
     def h_random(self, grid):
         return random.random()
     
-    def h_uniformity(self, grid):
-        uniformity = 0
-        for i in range(grid.size):
-            for j in range(grid.size):
-                if grid.map[i][j] != 0:
-                    for direction in [(0, 1), (1, 0)]:
-                        x, y = i + direction[0], j + direction[1]
-                        if x < grid.size and y < grid.size and grid.map[x][y] != 0:
-                            uniformity -= abs(grid.map[i][j] - grid.map[x][y])
-        return -uniformity 
+    # def h_uniformity(self, grid):
+    #     uniformity = 0
+    #     for i in range(grid.size):
+    #         for j in range(grid.size):
+    #             if grid.map[i][j] != 0:
+    #                 for direction in [(0, 1), (1, 0)]:
+    #                     x, y = i + direction[0], j + direction[1]
+    #                     if x < grid.size and y < grid.size and grid.map[x][y] != 0:
+    #                         uniformity -= abs(grid.map[i][j] - grid.map[x][y])
+    #     return -uniformity 
 
-    def h_greedy(self, grid):
-        max_tile = grid.getMaxTile()
-        return max_tile
+    # def h_greedy(self, grid):
+    #     max_tile = grid.getMaxTile()
+    #     return max_tile
     
-    def h_merges(self, grid):
-        merges = 0
-        for i in range(grid.size):
-            for j in range(grid.size - 1):
-                if grid.map[i][j] == grid.map[i][j + 1]:
-                    merges += 1
-                if grid.map[j][i] == grid.map[j + 1][i]:
-                    merges += 1
-        return merges
+    # def h_merges(self, grid):
+    #     merges = 0
+    #     for i in range(grid.size):
+    #         for j in range(grid.size - 1):
+    #             if grid.map[i][j] == grid.map[i][j + 1]:
+    #                 merges += 1
+    #             if grid.map[j][i] == grid.map[j + 1][i]:
+    #                 merges += 1
+    #     return merges
 
-    def h_non_monotonic_penalty(self, grid):
-        penalty = 0
-        for i in range(grid.size):
-            for j in range(grid.size - 1):
-                if grid.map[i][j] > grid.map[i][j + 1]:
-                    penalty += (grid.map[i][j] - grid.map[i][j + 1]) * (2 ** (grid.map[i][j] + grid.map[i][j + 1]))
-                if grid.map[j][i] > grid.map[j + 1][i]:
-                    penalty += (grid.map[j][i] - grid.map[j + 1][i]) * (2 ** (grid.map[j][i] + grid.map[j + 1][i]))
-        return penalty
+    # def h_non_monotonic_penalty(self, grid):
+    #     penalty = 0
+    #     for i in range(grid.size):
+    #         for j in range(grid.size - 1):
+    #             if grid.map[i][j] > grid.map[i][j + 1]:
+    #                 penalty += (grid.map[i][j] - grid.map[i][j + 1]) * (2 ** (grid.map[i][j] + grid.map[i][j + 1]))
+    #             if grid.map[j][i] > grid.map[j + 1][i]:
+    #                 penalty += (grid.map[j][i] - grid.map[j + 1][i]) * (2 ** (grid.map[j][i] + grid.map[j + 1][i]))
+    #     return penalty
     
     def h_open_spot_next_to_2_or_4(self, grid):
         if len(grid.getAvailableCells()) != 1:
@@ -238,10 +238,12 @@ class IntelligentAgent(BaseAI):
                 (open_cell[0], open_cell[1] - 1),
             ]
             score = 0
-            for cell in adjacent_cells:
-                x, y = cell
-                if 0 <= x < grid.size and 0 <= y < grid.size and (grid.map[x][y] == 2 or grid.map[x][y] == 4):
-                    score += 1
+            
+            for x, y in adjacent_cells:
+                if 0 <= x < grid.size and 0 <= y < grid.size:
+                    tile_value = grid.map[x][y]
+                    if tile_value == 2 or tile_value == 4:
+                        score += 1
 
             return score
 
