@@ -28,9 +28,6 @@ class IntelligentAgent(BaseAI):
                 return grid, self.h4(grid, move, self.curr_move)
             
             for move, new_grid in grid.getAvailableMoves(): # [0, 1, 2, 3]
-                # print("move: " + str(move))
-                # if move == 1:
-                #     continue
                 
                 _, eval = self.expectiminimax(new_grid, depth+1, False, alpha, beta, start_time, move, self.curr_move)
                 
@@ -81,35 +78,22 @@ class IntelligentAgent(BaseAI):
         max_tile = grid.getMaxTile()
         empty_cells = len(grid.getAvailableCells())
 
-        # Assume weights are initially all 1.0
         weights = {
             'empty': 4.0, #4.0
             'monotonicity': 2.2,   #2.2
             'smoothness': 1.0,  #1.0
             'random': 0.5,
-            'uniformity': 0.0,
-            'greedy': 0.0,
             'merges': 1.0, #1.0
-            # 'non_monotonic_penalty': 0.0,
             'open_2_or_4': 2.0,
             'corner': 1.0,
             'maxy': 3.5 #3.5
         }
-
-        # tiles = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
-
-        # for tile in tiles:
-        #     if max_tile > tile:
-
         
         if max_tile == 1024:
             weights['empty'] += 1.0
-            # weights['monotonicity'] += 2.0
         elif empty_cells <= 2:
             weights['empty'] += 2.0
             weights['merges'] += 1.0
-            # weights['open_2_or_4'] += 1.0
-        # ... other conditions to adjust weights
 
         return weights, max_tile
     
@@ -120,10 +104,7 @@ class IntelligentAgent(BaseAI):
         monotonicity_score = self.h_monotinicity(grid)
         smoothness_score = self.h_smoothness(grid)
         random_score = self.h_random(grid)
-        uniformity_score = self.h_uniformity(grid)
-        greedy_score = self.h_greedy(grid)
         merges = self.h_large_merges(grid)
-        # non_mono_penalty_score = self.h_non_monotonic_penalty(grid)
         open_2_or_4_score = self.h_open_spot_next_to_2_or_4(grid)
         in_corner = self.h_top_corner(grid)
 
@@ -134,10 +115,7 @@ class IntelligentAgent(BaseAI):
             weights['monotonicity'] * monotonicity_score +
             weights['smoothness'] * smoothness_score +
             weights['random'] * random_score +
-            weights['uniformity'] * uniformity_score +
-            weights['greedy'] * greedy_score +
             weights['merges'] * merges +
-            # weights['non_monotonic_penalty'] * non_mono_penalty_score +
             weights['open_2_or_4'] * open_2_or_4_score +
             max_tile * weights['maxy']
         )
@@ -148,20 +126,6 @@ class IntelligentAgent(BaseAI):
             h4 = h4 / 10000
         if prev_move == 1 and move == 0:
             h4 = h4 * 100000000
-
-        # better_corner, diff = self.compare_top_corners(grid)
-        # if move == better_corner:
-        #     h4 = h4 * math.log(diff, 2)
-
-
-        # if move == 1:
-        #     if empty_score < 3:
-        #         h4 = h4 / 20
-        #     else:
-        #         h4 = h4 / 30
-        
-        # if move == 2:
-        #     h4 = h4 * 2
 
         return h4
     
@@ -211,21 +175,6 @@ class IntelligentAgent(BaseAI):
     def h_random(self, grid):
         return random.random()
     
-    def h_uniformity(self, grid):
-        uniformity = 0
-        for i in range(grid.size):
-            for j in range(grid.size):
-                if grid.map[i][j] != 0:
-                    for direction in [(0, 1), (1, 0)]:
-                        x, y = i + direction[0], j + direction[1]
-                        if x < grid.size and y < grid.size and grid.map[x][y] != 0:
-                            uniformity -= abs(grid.map[i][j] - grid.map[x][y])
-        return -uniformity  # return negative since lower uniformity (less difference between tiles) is better
-
-    def h_greedy(self, grid):
-        max_tile = grid.getMaxTile()
-        return max_tile
-    
     def h_merges(self, grid):
         merges = 0
         for i in range(grid.size):
@@ -237,19 +186,6 @@ class IntelligentAgent(BaseAI):
                 if grid.map[j][i] == grid.map[j + 1][i]:
                     merges += 1
         return merges
-
-    def h_non_monotonic_penalty(self, grid):
-        penalty = 0
-        for i in range(grid.size):
-            for j in range(grid.size - 1):
-                # Horizontal penalty
-                if grid.map[i][j] > grid.map[i][j + 1]:
-                    penalty += (grid.map[i][j] - grid.map[i][j + 1]) * (2 ** (grid.map[i][j] + grid.map[i][j + 1]))
-                # Vertical penalty
-                if grid.map[j][i] > grid.map[j + 1][i]:
-                    penalty += (grid.map[j][i] - grid.map[j + 1][i]) * (2 ** (grid.map[j][i] + grid.map[j + 1][i]))
-        # print(str(penalty))
-        return penalty
     
     def h_open_spot_next_to_2_or_4(self, grid):
         if len(grid.getAvailableCells()) != 1:
@@ -307,21 +243,6 @@ class IntelligentAgent(BaseAI):
                                 possible_mergers += 1
 
         return possible_mergers
-        # # This function will calculate a heuristic score based on the size of the merges that can be made
-        
-        # score = 0  # Initialize score to 0
-        
-        # for i in range(grid.size):
-        #     for j in range(grid.size - 1):
-        #         # Check for potential horizontal merges
-        #         if grid.map[i][j] == grid.map[i][j + 1] and grid.map[i][j] != 0:
-        #             score += grid.map[i][j]  # Add the value of the tile to the score
-
-        #         # Check for potential vertical merges
-        #         if grid.map[j][i] == grid.map[j + 1][i] and grid.map[j][i] != 0:
-        #             score += grid.map[j][i]  # Add the value of the tile to the score
-        
-        # return score
     
     def h_top_corner(self, grid):
         max_tile = grid.getMaxTile()
